@@ -11,12 +11,17 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/video.hpp>
 
+struct tailData {
+	double angle;
+	cv::Point tailLocation;
+};
 
 void processFrame(cv::Mat&, cv::Mat&, std::vector<cv::Vec3f>&);
 
 cv::Mat morphSkeleton(cv::Mat);
 
-double skeletonAngle(cv::Mat&);
+tailData skeletonAngle(cv::Mat&);
+
 
 
 int main()
@@ -26,6 +31,7 @@ int main()
 	cv::Mat skel;
 	std::vector<cv::Vec3f> circles;
     std::vector<double> angles;
+	std::vector<cv::Point> tailLocations;
 	cv::VideoCapture cap = cv::VideoCapture("Movie 12.avi");
     bool loop = false;
 
@@ -71,8 +77,9 @@ int main()
 					cv::circle(frame, nonZeroCoordinates.at<cv::Point>(i), 1, cv::Scalar(255, 0,00));
 				}
 
-                double angle = skeletonAngle(skel);
-                angles.push_back(angle);
+                tailData tail = skeletonAngle(skel);
+                angles.push_back(tail.angle);
+				tailLocations.push_back(tail.tailLocation);
 
 			}
 
@@ -110,9 +117,10 @@ int main()
 	cap.release();
 	cv::destroyAllWindows();
 
-    std::ofstream angleDataFile("angleData.txt");
-    for (int n = 0; n < angles.size(); n++)
-        angleDataFile << angles[n] << std::endl;
+    std::ofstream tailDataFile("tailData.txt");
+	for (int n = 0; n < angles.size(); n++) {
+		tailDataFile << angles[n] << '\t' << tailLocations[n].x << '\t' << tailLocations[n].y << std::endl;
+	}
 
 	std::cout << "Done" << std::endl;
     return 0;
@@ -154,9 +162,11 @@ cv::Mat morphSkeleton(cv::Mat input)
 	return skel;
 }
 
-double skeletonAngle(cv::Mat& skel)
+tailData skeletonAngle(cv::Mat& skel)
 {
+	tailData tail;
     double angle;
+	cv::Point tailLocation;
     cv::Mat nonZeroCoordinates;
 
     int minX = skel.cols + 1;
@@ -177,13 +187,17 @@ double skeletonAngle(cv::Mat& skel)
             maxY = yVal;
     }
 
+
+	tailLocation = cv::Point(maxX, maxY);
     double yDiff = maxY - minY;
     double xDiff = maxX - minX;
     if (xDiff == 0)
-        xDiff = xDiff + 1;
+        xDiff = xDiff + 0.001;
 
     angle = atan(yDiff / xDiff);
+	tail.angle = angle;
+	tail.tailLocation = tailLocation;
 
-    return angle;
+    return tail;
 }
 
